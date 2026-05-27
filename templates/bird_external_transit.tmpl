@@ -1,0 +1,35 @@
+router id {{.RouterID}};
+
+log stderr all;
+
+protocol device {
+}
+
+protocol direct {
+    ipv4;
+}
+
+protocol kernel {
+    ipv4 {
+        export all;
+        import none;
+    };
+}
+
+# Advertise a default route toward the customer (ISP edge)
+protocol static {
+    ipv4;
+    route 0.0.0.0/0 blackhole;
+    route {{.Loopback}} blackhole;
+}
+
+{{- range .EBGPSessions}}
+protocol bgp ebgp_{{.SanitizedName}} {
+    local as {{$.ASN}};
+    neighbor {{.PeerAddr}} as {{.PeerASN}};
+    ipv4 {
+        import all;
+        export all;
+    };
+}
+{{end}}

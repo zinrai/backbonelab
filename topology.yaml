@@ -1,0 +1,44 @@
+asn: 65000
+external_asn:
+  transit_start: 65001
+  peer_start: 65010
+  customer_start: 65100
+loopback: 10.255.0.0/16
+backbone: 10.0.0.0/8
+
+sites:
+  - name: hkd
+  - name: tyo
+  - name: osa
+  - name: kyu
+
+backbone_links:
+  - [hkd, tyo]
+  - [tyo, osa]
+  - [osa, kyu]
+
+external_peers:
+  - name: transit-a
+    type: transit
+    connect_to: tyo
+  - name: transit-b
+    type: transit
+    connect_to: osa
+  - name: peer-a
+    type: peer
+    connect_to: tyo
+  - name: peer-b
+    type: peer
+    connect_to: osa
+  - name: customer-a
+    type: customer
+    connect_to: hkd
+  - name: customer-b
+    type: customer
+    connect_to: tyo
+  - name: customer-c
+    type: customer
+    connect_to: osa
+  - name: customer-d
+    type: customer
+    connect_to: kyu

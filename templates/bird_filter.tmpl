@@ -1,0 +1,68 @@
+define MY_ASN = {{.ASN}};
+
+define COMMUNITY_TRANSIT  = ({{.ASN}}, 100);
+define COMMUNITY_PEER     = ({{.ASN}}, 200);
+define COMMUNITY_CUSTOMER = ({{.ASN}}, 300);
+define COMMUNITY_OWN      = ({{.ASN}}, 900);
+
+define LOCALPREF_TRANSIT = 100;
+define LOCALPREF_PEER    = 200;
+
+function is_bogon_prefix() -> bool {
+    return net ~ [
+        0.0.0.0/8+,
+        10.0.0.0/8+,
+        100.64.0.0/10+,
+        127.0.0.0/8+,
+        169.254.0.0/16+,
+        172.16.0.0/12+,
+        192.0.0.0/24+,
+        192.0.2.0/24+,
+        192.168.0.0/16+,
+        198.18.0.0/15+,
+        198.51.100.0/24+,
+        203.0.113.0/24+,
+        240.0.0.0/4+
+    ];
+}
+
+filter bgp_import_transit {
+    if is_bogon_prefix() then reject;
+    bgp_local_pref = LOCALPREF_TRANSIT;
+    bgp_community.add(COMMUNITY_TRANSIT);
+    accept;
+}
+
+filter bgp_import_peer {
+    if is_bogon_prefix() then reject;
+    bgp_local_pref = LOCALPREF_PEER;
+    bgp_community.add(COMMUNITY_PEER);
+    accept;
+}
+
+filter bgp_import_customer {
+    if is_bogon_prefix() then reject;
+    bgp_community.add(COMMUNITY_CUSTOMER);
+    accept;
+}
+
+filter bgp_export_to_transit {
+    if is_bogon_prefix() then reject;
+    # do not export peer/transit learned routes upstream
+    if COMMUNITY_TRANSIT ~ bgp_community then reject;
+    if COMMUNITY_PEER ~ bgp_community then reject;
+    accept;
+}
+
+filter bgp_export_to_peer {
+    if is_bogon_prefix() then reject;
+    # do not export transit/peer learned routes to peers
+    if COMMUNITY_TRANSIT ~ bgp_community then reject;
+    if COMMUNITY_PEER ~ bgp_community then reject;
+    accept;
+}
+
+filter bgp_export_to_customer {
+    if is_bogon_prefix() then reject;
+    accept;
+}

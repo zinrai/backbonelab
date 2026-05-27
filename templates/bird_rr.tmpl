@@ -1,0 +1,67 @@
+router id {{.RouterID}};
+
+log stderr all;
+
+{{.Filters}}
+protocol device {
+}
+
+protocol direct {
+    ipv4;
+}
+
+protocol kernel {
+    ipv4 {
+        export all;
+        import none;
+    };
+}
+
+# own loopback
+protocol static static_self {
+    ipv4;
+    route {{.Loopback}} blackhole;
+}
+
+# BFD for fast OSPF neighbor failure detection
+protocol bfd {
+    interface "*" {
+        min rx interval 100 ms;
+        min tx interval 100 ms;
+        multiplier 3;
+    };
+}
+
+protocol ospf v2 ospf4 {
+    ipv4 {
+        import all;
+        export none;
+    };
+    area 0 {
+{{- range .OSPFInterfaces}}
+        interface "{{.Name}}" {
+            type ptp;
+            bfd yes;
+            # {{.Address}}
+        };
+{{- end}}
+        interface "lo" {
+            stub;
+        };
+    };
+}
+{{- range .IBGPNeighbors}}
+protocol bgp ibgp_{{.SanitizedName}} {
+    local {{$.RouterID}} as {{$.ASN}};
+    neighbor {{.Address}} as {{$.ASN}};
+    source address {{$.RouterID}};
+{{- if .IsRRClient}}
+    rr client;
+    rr cluster id {{$.ClusterID}};
+{{- end}}
+    ipv4 {
+        import all;
+        export all;
+    };
+}
+{{end}}
